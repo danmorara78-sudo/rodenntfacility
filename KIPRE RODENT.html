@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rodent Facility Management System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- PDF Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
+        
+        /* Sidebar */
+        #sidebar {
+            width: var(--sidebar-width); height: 100vh; position: fixed; left: 0; top: 0;
+            background: linear-gradient(180deg, var(--primary-color) 0%, #1a252f 100%);
+            color: white; z-index: 1000; transition: all 0.3s; overflow-y: auto;
+        }
+        #sidebar .sidebar-header { padding: 20px; background: rgba(0,0,0,0.2); text-align: center; }
+        #sidebar ul.components { padding: 20px 0; }
+        #sidebar ul li a {
+            padding: 10px 25px; font-size: 0.9em; display: block; color: rgba(255,255,255,0.8);
+            text-decoration: none; transition: all 0.3s; border-left: 4px solid transparent; cursor: pointer;
+        }
+        #sidebar ul li a:hover, #sidebar ul li a.active {
+            color: white; background: rgba(255,255,255,0.1); border-left-color: var(--accent-color);
+        }
+        #sidebar ul li a i { margin-right: 10px; width: 20px; text-align: center; }
+
+        /* Content */
+        #content { margin-left: var(--sidebar-width); padding: 30px; transition: all 0.3s; }
+        .card { border: none; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header {
+            background-color: white; border-bottom: 2px solid #f0f0f0; font-weight: 600;
+            color: var(--primary-color); border-radius: 10px 10px 0 0 !important; padding: 15px 20px;
+        }
+        .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .table-responsive { border-radius: 8px; overflow: hidden; }
+        .table thead { background-color: var(--primary-color); color: white; }
+        
+        /* Mobile */
+        @media (max-width: 768px) {
+            #sidebar { margin-left: calc(-1 * var(--sidebar-width)); }
+            #sidebar.active { margin-left: 0; }
+            #content { margin-left: 0; }
+        }
+
+        .section-view { display: none; }
+        .section-view.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Toast Notification */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        
+        /* Status Badges */
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 600; }
+        .status-pending { background-color: #f39c12; color: white; }
+        .status-approved { background-color: #27ae60; color: white; }
+        .status-rejected { background-color: #e74c3c; color: white; }
+        .status-completed { background-color: #3498db; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Sidebar -->
+    <nav id="sidebar">
+        <div class="sidebar-header">
+            <h4><i class="fas fa-flask"></i> Rodent Facility</h4>
+            <small>Management System</small>
+        </div>
+        <ul class="list-unstyled components">
+            <li><a onclick="showSection('dashboard')" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+            <li><a onclick="showSection('cage-inventory')"><i class="fas fa-box"></i> Cage Inventory</a></li>
+            <li><a onclick="showSection('census')"><i class="fas fa-users"></i> Weekly Census</a></li>
+            <li><a onclick="showSection('daily-health')"><i class="fas fa-heartbeat"></i> Daily Health Report</a></li>
+            <li><a onclick="showSection('treatment')"><i class="fas fa-syringe"></i> Treatment</a></li>
+            <li><a onclick="showSection('breeding')"><i class="fas fa-paw"></i> Breeding Record</a></li>
+            <li><a onclick="showSection('projects')"><i class="fas fa-project-diagram"></i> Projects</a></li>
+            <li><a onclick="showSection('project-progress')"><i class="fas fa-tasks"></i> Project Progress</a></li>
+            <li><a onclick="showSection('animal-requisition')"><i class="fas fa-clipboard-list"></i> Animal Requisition</a></li>
+            <li><a onclick="showSection('workorders')"><i class="fas fa-tools"></i> Work Orders</a></li>
+            <li><a onclick="showSection('inspection')"><i class="fas fa-search"></i> Inspection Data</a></li>
+            <li><a onclick="showSection('charges')"><i class="fas fa-file-invoice-dollar"></i> Charges</a></li>
+            <li><a onclick="showSection('feeding')"><i class="fas fa-utensils"></i> Feeding & Inventory</a></li>
+            <li><a onclick="showSection('cleaning')"><i class="fas fa-broom"></i> Cleaning</a></li>
+            <li><a onclick="showSection('enrichment')"><i class="fas fa-heart"></i> Enrichment</a></li>
+            <li><a onclick="showSection('environment')"><i class="fas fa-thermometer-half"></i> Environment</a></li>
+            <li><a onclick="showSection('staff-training')"><i class="fas fa-chalkboard-teacher"></i> Staff Training</a></li>
+            <li><a onclick="showSection('facility-inv')"><i class="fas fa-warehouse"></i> Facility Inventory</a></li>
+            <li><a onclick="showSection('settings')"><i class="fas fa-cogs"></i> Settings</a></li>
+        </ul>
+    </nav>
+
+    <!-- Page Content -->
+    <div id="content">
+        <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 rounded shadow-sm">
+            <div class="container-fluid">
+                <button type="button" id="sidebarCollapse" class="btn btn-outline-secondary"><i class="fas fa-bars"></i></button>
+                <span class="navbar-text ms-3 fw-bold" id="page-title">Dashboard</span>
+                <div class="ms-auto">
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearAllData()"><i class="fas fa-trash"></i> Reset All</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="section-view active">
+            <div class="row">
+                <div class="col-md-3"><div class="card bg-primary text-white"><div class="card-body"><h5>Total Animals</h5><h2 id="dash-total-animals">0</h2></div></div></div>
+                <div class="col-md-3"><div class="card bg-success text-white"><div class="card-body"><h5>Active Cages</h5><h2 id="dash-active-cages">0</h2></div></div></div>
+                <div class="col-md-3"><div class="card bg-warning text-dark"><div class="card-body"><h5>Pending Tasks</h5><h2 id="dash-pending-tasks">0</h2></div></div></div>
+                <div class="col-md-3"><div class="card bg-info text-white"><div class="card-body"><h5>Total Rooms</h5><h2 id="dash-total-rooms">0</h2></div></div></div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="fas fa-chart-line"></i> Recent Activity</div>
+                        <div class="card-body">
+                            <div id="recent-activity">
+                                <p class="text-muted">System ready. Select a module from the sidebar to begin data entry.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header"><i class="fas fa-bell"></i> Notifications</div>
+                        <div class="card-body">
+                            <div id="notifications">
+                                <p class="text-muted">No new notifications.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAGE INVENTORY -->
+        <div id="cage-inventory" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-box"></i> Cage Inventory (Per Cage)</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('cageModal')"><i class="fas fa-plus"></i> Add Cage Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="cageTable">
+                            <thead>
+                                <tr><th>Cage ID</th><th>Room</th><th>Species</th><th>Strain</th><th>Count</th><th>Sex</th><th>Date Updated</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('cage-inventory')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CENSUS -->
+        <div id="census" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-users"></i> Weekly Census</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('censusModal')"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="censusTable">
+                            <thead>
+                                <tr><th>Week Start</th><th>Room</th><th>Species</th><th>Strain</th><th>Males</th><th>Females</th><th>Total</th><th>Counted By</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('census')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAILY HEALTH REPORT (NEW) -->
+        <div id="daily-health" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-heartbeat"></i> Daily Health Check Report</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('dailyHealthModal')"><i class="fas fa-plus"></i> Add Health Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="dailyHealthTable">
+                            <thead>
+                                <tr><th>Date</th><th>Time</th><th>Room</th><th>Cage ID</th><th>Species</th><th>Strain</th><th>Animals</th><th>Condition Score</th><th>Activity</th><th>Clinical Signs</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('daily-health')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TREATMENT -->
+        <div id="treatment" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-syringe"></i> Treatment Records</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('treatmentModal')"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="treatmentTable">
+                            <thead>
+                                <tr><th>Date</th><th>Room</th><th>Cage ID</th><th>Drug</th><th>Dose</th><th>Route</th><th>Vet</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('treatment')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BREEDING -->
+        <div id="breeding" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-paw"></i> Breeding Records</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('breedingModal')"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="breedingTable">
+                            <thead><tr><th>Date</th><th>Room</th><th>Cage ID</th><th>Pups Born</th><th>Notes</th><th>Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROJECTS -->
+        <div id="projects" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-project-diagram"></i> Project Records</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('projectModal')"><i class="fas fa-plus"></i> Add Project</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="projectTable">
+                            <thead><tr><th>Project ID</th><th>Title</th><th>PI</th><th>Species</th><th>Strain</th><th>Animals Approved</th><th>Animals Used</th><th>Status</th><th>Vet</th><th>Tech</th><th>Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('projects')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PROJECT PROGRESS (NEW) -->
+        <div id="project-progress" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-tasks"></i> Project Progress Tracking</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('projectProgressModal')"><i class="fas fa-plus"></i> Add Progress Record</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="projectProgressTable">
+                            <thead>
+                                <tr><th>Date</th><th>Project ID</th><th>Project Title</th><th>Procedure</th><th>Animals Used</th><th>Observations</th><th>ISREC</th><th>Tech</th><th>PI</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('project-progress')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANIMAL REQUISITION (NEW) -->
+        <div id="animal-requisition" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-clipboard-list"></i> Animal Requisition Requests</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('animalRequisitionModal')"><i class="fas fa-plus"></i> New Requisition</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="animalRequisitionTable">
+                            <thead>
+                                <tr><th>Request Date</th><th>Project ID</th><th>Researcher</th><th>Species</th><th>Strain</th><th>Qty Requested</th><th>Qty Approved</th><th>Status</th><th>Approved By</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('animal-requisition')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- WORK ORDERS -->
+        <div id="workorders" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-tools"></i> Work Orders</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('workOrderModal')"><i class="fas fa-plus"></i> Add Request</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="workOrderTable">
+                            <thead><tr><th>Date</th><th>Requested By</th><th>Dept</th><th>Description</th><th>Assigned To</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- INSPECTION DATA (NEW) -->
+        <div id="inspection" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-search"></i> Inspection Data</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('inspectionModal')"><i class="fas fa-plus"></i> Add Inspection</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="inspectionTable">
+                            <thead>
+                                <tr><th>Date</th><th>Inspection Type</th><th>Area/Room</th><th>Inspector</th><th>Findings</th><th>Issues Found</th><th>Corrective Action</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('inspection')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARGES -->
+        <div id="charges" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-file-invoice-dollar"></i> Charges & Billing</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('chargeModal')"><i class="fas fa-plus"></i> Add Charge</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="chargeTable">
+                            <thead><tr><th>Date</th><th>Project Code</th><th>Researcher</th><th>Service</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('charges')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEEDING -->
+        <div id="feeding" class="section-view">
+            <ul class="nav nav-tabs mb-3" id="feedTab" role="tablist">
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#feed-daily">Daily Feeding</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#feed-inventory">Feed Inventory</button></li>
+                <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#feed-monthly">Monthly Usage</button></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="feed-daily">
+                    <div class="card"><div class="card-header d-flex justify-content-between"><span>Daily Log</span><button class="btn btn-primary btn-sm" onclick="openModal('dailyFeedModal')">Add Entry</button></div>
+                    <div class="card-body"><table class="table table-sm" id="dailyFeedTable"><thead><tr><th>Date</th><th>Room</th><th>Cage</th><th>Feed (g)</th><th>Staff</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+                </div>
+                <div class="tab-pane fade" id="feed-inventory">
+                    <div class="card"><div class="card-header d-flex justify-content-between"><span>Feed Inventory</span><button class="btn btn-primary btn-sm" onclick="openModal('feedInvModal')">Add Batch</button></div>
+                    <div class="card-body"><table class="table table-sm" id="feedInvTable"><thead><tr><th>Batch ID</th><th>Type</th><th>Supplier</th><th>Qty (kg)</th><th>Expiry</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+                </div>
+                <div class="tab-pane fade" id="feed-monthly">
+                    <div class="card"><div class="card-header">Monthly Usage Summary</div><div class="card-body"><table class="table table-sm" id="monthlyFeedTable"><thead><tr><th>Month</th><th>Total Used (kg)</th><th>Avg Per Day</th><th>Actions</th></tr></thead><tbody></tbody></table></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLEANING -->
+        <div id="cleaning" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-broom"></i> Cleaning & Sanitation</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('cleaningModal')"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover" id="cleaningTable">
+                        <thead><tr><th>Date</th><th>Room</th><th>Type</th><th>Disinfectant</th><th>Performed By</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENRICHMENT -->
+        <div id="enrichment" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-heart"></i> Enrichment Records</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('enrichmentModal')"><i class="fas fa-plus"></i> Add Record</button>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover" id="enrichmentTable">
+                        <thead><tr><th>Cage</th><th>Room</th><th>Type</th><th>Material</th><th>Date Added</th><th>Staff</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ENVIRONMENT -->
+        <div id="environment" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-thermometer-half"></i> Environment Monitoring</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('envModal')"><i class="fas fa-plus"></i> Add Reading</button>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover" id="envTable">
+                        <thead><tr><th>Date</th><th>Time</th><th>Room</th><th>Temp (°C)</th><th>Humidity (%)</th><th>Light Cycle</th><th>Checked By</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- STAFF TRAINING (NEW) -->
+        <div id="staff-training" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-chalkboard-teacher"></i> Staff Training Records</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('staffTrainingModal')"><i class="fas fa-plus"></i> Add Training</button>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="staffTrainingTable">
+                            <thead>
+                                <tr><th>Date</th><th>Staff Name</th><th>Department</th><th>Training Type</th><th>Topic</th><th>Trainer</th><th>Duration (hrs)</th><th>Status</th><th>Certification</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-success mt-2" onclick="generatePDF('staff-training')"><i class="fas fa-file-pdf"></i> Generate Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- FACILITY INVENTORY -->
+        <div id="facility-inv" class="section-view">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-warehouse"></i> Facility Inventory</span>
+                    <button class="btn btn-primary btn-sm" onclick="openModal('facilityInvModal')"><i class="fas fa-plus"></i> Add Item</button>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover" id="facilityInvTable">
+                        <thead><tr><th>Item ID</th><th>Category</th><th>Name</th><th>Qty</th><th>Location</th><th>Condition</th><th>Actions</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div id="settings" class="section-view">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card"><div class="card-header">Manage Rooms</div><div class="card-body">
+                        <div class="input-group mb-2"><input type="text" id="newRoomName" class="form-control" placeholder="Room Name"><button class="btn btn-primary" onclick="addSetting('rooms', 'newRoomName')">Add</button></div>
+                        <ul id="roomList" class="list-group"></ul>
+                    </div></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card"><div class="card-header">Manage Vets</div><div class="card-body">
+                        <div class="input-group mb-2"><input type="text" id="newVetName" class="form-control" placeholder="Vet Name"><button class="btn btn-primary" onclick="addSetting('vets', 'newVetName')">Add</button></div>
+                        <ul id="vetList" class="list-group"></ul>
+                    </div></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card"><div class="card-header">Manage Species</div><div class="card-body">
+                        <div class="input-group mb-2"><input type="text" id="newSpeciesName" class="form-control" placeholder="Species"><button class="btn btn-primary" onclick="addSetting('species', 'newSpeciesName')">Add</button></div>
+                        <ul id="speciesList" class="list-group"></ul>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MODALS (Forms) -->
+    
+    <!-- Cage Inventory Modal -->
+    <div class="modal fade" id="cageModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Cage Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="cageForm"><input type="hidden" id="cageId">
+                        <div class="mb-3"><label>Cage ID *</label><input type="text" class="form-control" id="cageCageId" required></div>
+                        <div class="mb-3"><label>Room *</label><select class="form-control" id="cageRoom"></select></div>
+                        <div class="mb-3"><label>Species *</label><select class="form-control" id="cageSpecies"></select></div>
+                        <div class="mb-3"><label>Strain</label><input type="text" class="form-control" id="cageStrain"></div>
+                        <div class="mb-3"><label>Animal Count *</label><input type="number" class="form-control" id="cageCount" required></div>
+                        <div class="mb-3"><label>Sex</label><select class="form-control" id="cageSex"><option>Mixed</option><option>Male</option><option>Female</option></select></div>
+                        <div class="mb-3"><label>Date Updated *</label><input type="date" class="form-control" id="cageDate" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('cage')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Census Modal -->
+    <div class="modal fade" id="censusModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Census Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="censusForm"><input type="hidden" id="censusId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Week Start Date *</label><input type="date" class="form-control" id="censusDate" required></div>
+                            <div class="col-md-6"><label>Room *</label><select class="form-control" id="censusRoom"></select></div>
+                            <div class="col-md-6"><label>Species *</label><select class="form-control" id="censusSpecies"></select></div>
+                            <div class="col-md-6"><label>Strain</label><input type="text" class="form-control" id="censusStrain"></div>
+                            <div class="col-md-3"><label>Males *</label><input type="number" class="form-control" id="censusMales" value="0"></div>
+                            <div class="col-md-3"><label>Females *</label><input type="number" class="form-control" id="censusFemales" value="0"></div>
+                            <div class="col-md-3"><label>Juvies</label><input type="number" class="form-control" id="censusJuvies" value="0"></div>
+                            <div class="col-md-3"><label>Pups</label><input type="number" class="form-control" id="censusPups" value="0"></div>
+                            <div class="col-md-6"><label>Counted By</label><input type="text" class="form-control" id="censusBy"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('census')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Health Report Modal (NEW) -->
+    <div class="modal fade" id="dailyHealthModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Daily Health Check Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="dailyHealthForm"><input type="hidden" id="dailyHealthId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Date *</label><input type="date" class="form-control" id="dhDate" required></div>
+                            <div class="col-md-6"><label>Time *</label><select class="form-control" id="dhTime" required><option>Morning</option><option>Afternoon</option><option>Evening</option></select></div>
+                            <div class="col-md-6"><label>Room *</label><select class="form-control" id="dhRoom"></select></div>
+                            <div class="col-md-6"><label>Cage ID *</label><input type="text" class="form-control" id="dhCage" required></div>
+                            <div class="col-md-6"><label>Species *</label><select class="form-control" id="dhSpecies"></select></div>
+                            <div class="col-md-6"><label>Strain</label><input type="text" class="form-control" id="dhStrain"></div>
+                            <div class="col-md-4"><label>Number of Animals *</label><input type="number" class="form-control" id="dhAnimals" required></div>
+                            <div class="col-md-4"><label>Body Condition Score (1-5) *</label><select class="form-control" id="dhCondition"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+                            <div class="col-md-4"><label>Activity Level *</label><select class="form-control" id="dhActivity"><option>Normal</option><option>Decreased</option><option>Increased</option><option>Lethargic</option></select></div>
+                            <div class="col-md-12"><label>Clinical Signs Observed</label><textarea class="form-control" id="dhClinical" rows="2"></textarea></div>
+                            <div class="col-md-12"><label>Notes</label><textarea class="form-control" id="dhNotes" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('dailyhealth')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Treatment Modal -->
+    <div class="modal fade" id="treatmentModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Treatment Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="treatmentForm"><input type="hidden" id="treatmentId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Date *</label><input type="date" class="form-control" id="treatDate" required></div>
+                            <div class="col-md-6"><label>Room *</label><select class="form-control" id="treatRoom"></select></div>
+                            <div class="col-md-6"><label>Cage ID</label><input type="text" class="form-control" id="treatCage"></div>
+                            <div class="col-md-6"><label>Drug Name *</label><input type="text" class="form-control" id="treatDrug" required></div>
+                            <div class="col-md-4"><label>Dose</label><input type="text" class="form-control" id="treatDose"></div>
+                            <div class="col-md-4"><label>Route</label><select class="form-control" id="treatRoute"><option>IP</option><option>SC</option><option>PO</option><option>IV</option></select></div>
+                            <div class="col-md-4"><label>Vet/PI</label><select class="form-control" id="treatVet"></select></div>
+                            <div class="col-md-12"><label>Notes</label><textarea class="form-control" id="treatNotes"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('treatment')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breeding Modal -->
+    <div class="modal fade" id="breedingModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Breeding Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="breedingForm"><input type="hidden" id="breedingId">
+                        <div class="mb-3"><label>Date *</label><input type="date" class="form-control" id="breedDate" required></div>
+                        <div class="mb-3"><label>Room *</label><select class="form-control" id="breedRoom"></select></div>
+                        <div class="mb-3"><label>Cage ID</label><input type="text" class="form-control" id="breedCage"></div>
+                        <div class="mb-3"><label>Pups Born</label><input type="number" class="form-control" id="breedTotal"></div>
+                        <div class="mb-3"><label>Notes</label><textarea class="form-control" id="breedNotes"></textarea></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('breeding')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Modal -->
+    <div class="modal fade" id="projectModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Project Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="projectForm"><input type="hidden" id="projectId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Project ID *</label><input type="text" class="form-control" id="projId" required></div>
+                            <div class="col-md-6"><label>Title *</label><input type="text" class="form-control" id="projTitle" required></div>
+                            <div class="col-md-6"><label>PI *</label><input type="text" class="form-control" id="projPI" required></div>
+                            <div class="col-md-6"><label>Species *</label><select class="form-control" id="projSpecies"></select></div>
+                            <div class="col-md-6"><label>Strain</label><input type="text" class="form-control" id="projStrain"></div>
+                            <div class="col-md-6"><label>Animals Approved</label><input type="number" class="form-control" id="projApproved"></div>
+                            <div class="col-md-6"><label>Animals Used</label><input type="number" class="form-control" id="projUsed"></div>
+                            <div class="col-md-6"><label>Status</label><select class="form-control" id="projStatus"><option>Active</option><option>Pending</option><option>Completed</option><option>On Hold</option></select></div>
+                            <div class="col-md-6"><label>Vet in Charge</label><select class="form-control" id="projVet"></select></div>
+                            <div class="col-md-6"><label>Tech in Charge</label><input type="text" class="form-control" id="projTech"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('project')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Progress Modal (NEW) -->
+    <div class="modal fade" id="projectProgressModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Project Progress Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="projectProgressForm"><input type="hidden" id="projectProgressId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Date *</label><input type="date" class="form-control" id="ppDate" required></div>
+                            <div class="col-md-6"><label>Project ID *</label><input type="text" class="form-control" id="ppProjId" required></div>
+                            <div class="col-md-12"><label>Project Title *</label><input type="text" class="form-control" id="ppTitle" required></div>
+                            <div class="col-md-12"><label>Procedure *</label><textarea class="form-control" id="ppProcedure" rows="2" required></textarea></div>
+                            <div class="col-md-4"><label>Animals Used</label><input type="number" class="form-control" id="ppAnimals"></div>
+                            <div class="col-md-4"><label>ISREC Reference</label><input type="text" class="form-control" id="ppIsrec"></div>
+                            <div class="col-md-4"><label>Project Tech</label><input type="text" class="form-control" id="ppTech"></div>
+                            <div class="col-md-6"><label>PI</label><input type="text" class="form-control" id="ppPI"></div>
+                            <div class="col-md-6"><label>Observations</label><textarea class="form-control" id="ppObservations" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('projectprogress')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Animal Requisition Modal (NEW) -->
+    <div class="modal fade" id="animalRequisitionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Animal Requisition Request</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="animalRequisitionForm"><input type="hidden" id="animalRequisitionId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Request Date *</label><input type="date" class="form-control" id="arDate" required></div>
+                            <div class="col-md-6"><label>Project ID *</label><input type="text" class="form-control" id="arProjId" required></div>
+                            <div class="col-md-6"><label>Researcher *</label><input type="text" class="form-control" id="arResearcher" required></div>
+                            <div class="col-md-6"><label>Department</label><input type="text" class="form-control" id="arDept"></div>
+                            <div class="col-md-6"><label>Species *</label><select class="form-control" id="arSpecies"></select></div>
+                            <div class="col-md-6"><label>Strain</label><input type="text" class="form-control" id="arStrain"></div>
+                            <div class="col-md-4"><label>Qty Requested *</label><input type="number" class="form-control" id="arQtyRequested" required></div>
+                            <div class="col-md-4"><label>Qty Approved</label><input type="number" class="form-control" id="arQtyApproved"></div>
+                            <div class="col-md-4"><label>Status</label><select class="form-control" id="arStatus"><option>Pending</option><option>Approved</option><option>Rejected</option></select></div>
+                            <div class="col-md-6"><label>Approved By</label><input type="text" class="form-control" id="arApprovedBy"></div>
+                            <div class="col-md-6"><label>Notes</label><textarea class="form-control" id="arNotes" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('animalrequisition')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Work Order Modal -->
+    <div class="modal fade" id="workOrderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Work Order</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="workOrderForm"><input type="hidden" id="woId">
+                        <div class="mb-3"><label>Request Date *</label><input type="date" class="form-control" id="woDate" required></div>
+                        <div class="mb-3"><label>Requested By *</label><input type="text" class="form-control" id="woBy" required></div>
+                        <div class="mb-3"><label>Department</label><input type="text" class="form-control" id="woDept"></div>
+                        <div class="mb-3"><label>Description *</label><textarea class="form-control" id="woDesc" required></textarea></div>
+                        <div class="mb-3"><label>Assigned To</label><input type="text" class="form-control" id="woAssigned"></div>
+                        <div class="mb-3"><label>Status</label><select class="form-control" id="woStatus"><option>Pending</option><option>In Progress</option><option>Completed</option></select></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('workorder')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspection Modal (NEW) -->
+    <div class="modal fade" id="inspectionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Inspection Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="inspectionForm"><input type="hidden" id="inspectionId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Date *</label><input type="date" class="form-control" id="inspDate" required></div>
+                            <div class="col-md-6"><label>Inspection Type *</label><select class="form-control" id="inspType" required><option>Facility</option><option>Equipment</option><option>Cage</option><option>Sanitation</option><option>Safety</option><option>Regulatory</option></select></div>
+                            <div class="col-md-6"><label>Area/Room *</label><input type="text" class="form-control" id="inspArea" required></div>
+                            <div class="col-md-6"><label>Inspector *</label><input type="text" class="form-control" id="inspInspector" required></div>
+                            <div class="col-md-12"><label>Findings</label><textarea class="form-control" id="inspFindings" rows="2"></textarea></div>
+                            <div class="col-md-12"><label>Issues Found</label><textarea class="form-control" id="inspIssues" rows="2"></textarea></div>
+                            <div class="col-md-12"><label>Corrective Action</label><textarea class="form-control" id="inspAction" rows="2"></textarea></div>
+                            <div class="col-md-6"><label>Status</label><select class="form-control" id="inspStatus"><option>Open</option><option>In Progress</option><option>Resolved</option><option>Closed</option></select></div>
+                            <div class="col-md-6"><label>Follow-up Date</label><input type="date" class="form-control" id="inspFollowup"></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('inspection')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charge Modal -->
+    <div class="modal fade" id="chargeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Charge Entry</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="chargeForm"><input type="hidden" id="chargeId">
+                        <div class="mb-3"><label>Date *</label><input type="date" class="form-control" id="chDate" required></div>
+                        <div class="mb-3"><label>Project Code</label><input type="text" class="form-control" id="chCode"></div>
+                        <div class="mb-3"><label>Researcher *</label><input type="text" class="form-control" id="chRes" required></div>
+                        <div class="mb-3"><label>Service Type</label><input type="text" class="form-control" id="chService"></div>
+                        <div class="row">
+                            <div class="col-6 mb-3"><label>Quantity *</label><input type="number" class="form-control" id="chQty" oninput="calcCharge()" required></div>
+                            <div class="col-6 mb-3"><label>Unit Cost ($) *</label><input type="number" step="0.01" class="form-control" id="chUnit" oninput="calcCharge()" required></div>
+                        </div>
+                        <div class="mb-3"><label>Total Cost ($)</label><input type="text" class="form-control" id="chTotal" readonly></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('charge')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Feed Modal -->
+    <div class="modal fade" id="dailyFeedModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Daily Feeding</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="dailyFeedForm"><input type="hidden" id="dfId">
+                        <div class="mb-3"><label>Date *</label><input type="date" class="form-control" id="dfDate" required></div>
+                        <div class="mb-3"><label>Room *</label><select class="form-control" id="dfRoom"></select></div>
+                        <div class="mb-3"><label>Cage ID *</label><input type="text" class="form-control" id="dfCage" required></div>
+                        <div class="mb-3"><label>Feed Added (g) *</label><input type="number" class="form-control" id="dfQty" required></div>
+                        <div class="mb-3"><label>Staff Name *</label><input type="text" class="form-control" id="dfStaff" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('dailyfeed')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feed Inventory Modal -->
+    <div class="modal fade" id="feedInvModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Feed Inventory</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="feedInvForm"><input type="hidden" id="fiId">
+                        <div class="mb-3"><label>Batch ID *</label><input type="text" class="form-control" id="fiBatch" required></div>
+                        <div class="mb-3"><label>Feed Type *</label><input type="text" class="form-control" id="fiType" required></div>
+                        <div class="mb-3"><label>Supplier</label><input type="text" class="form-control" id="fiSupp"></div>
+                        <div class="mb-3"><label>Qty Received (kg) *</label><input type="number" class="form-control" id="fiQty" required></div>
+                        <div class="mb-3"><label>Expiry Date *</label><input type="date" class="form-control" id="fiExp" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('feedinv')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cleaning Modal -->
+    <div class="modal fade" id="cleaningModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Cleaning Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="cleaningForm"><input type="hidden" id="clId">
+                        <div class="mb-3"><label>Date *</label><input type="date" class="form-control" id="clDate" required></div>
+                        <div class="mb-3"><label>Room/Area *</label><input type="text" class="form-control" id="clRoom" required></div>
+                        <div class="mb-3"><label>Type</label><select class="form-control" id="clType"><option>General Cleaning</option><option>Disinfection</option><option>Cage Change</option></select></div>
+                        <div class="mb-3"><label>Disinfectant</label><input type="text" class="form-control" id="clChem"></div>
+                        <div class="mb-3"><label>Performed By *</label><input type="text" class="form-control" id="clBy" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('cleaning')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrichment Modal -->
+    <div class="modal fade" id="enrichmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Enrichment Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="enrichmentForm"><input type="hidden" id="enId">
+                        <div class="mb-3"><label>Cage ID *</label><input type="text" class="form-control" id="enCage" required></div>
+                        <div class="mb-3"><label>Room *</label><select class="form-control" id="enRoom"></select></div>
+                        <div class="mb-3"><label>Type *</label><input type="text" class="form-control" id="enType" required></div>
+                        <div class="mb-3"><label>Material</label><input type="text" class="form-control" id="enMat"></div>
+                        <div class="mb-3"><label>Date Added *</label><input type="date" class="form-control" id="enDate" required></div>
+                        <div class="mb-3"><label>Staff *</label><input type="text" class="form-control" id="enStaff" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('enrichment')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Environment Modal -->
+    <div class="modal fade" id="envModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Environment Reading</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="envForm"><input type="hidden" id="envId">
+                        <div class="mb-3"><label>Date *</label><input type="date" class="form-control" id="envDate" required></div>
+                        <div class="mb-3"><label>Time Period</label><select class="form-control" id="envTime"><option>Morning</option><option>Afternoon</option></select></div>
+                        <div class="mb-3"><label>Room *</label><select class="form-control" id="envRoom"></select></div>
+                        <div class="row">
+                            <div class="col-6 mb-3"><label>Temp (°C) *</label><input type="number" step="0.1" class="form-control" id="envTemp" required></div>
+                            <div class="col-6 mb-3"><label>Humidity (%) *</label><input type="number" class="form-control" id="envHum" required></div>
+                        </div>
+                        <div class="mb-3"><label>Light Cycle</label><input type="text" class="form-control" id="envLight"></div>
+                        <div class="mb-3"><label>Checked By *</label><input type="text" class="form-control" id="envBy" required></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('environment')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Staff Training Modal (NEW) -->
+    <div class="modal fade" id="staffTrainingModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Staff Training Record</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="staffTrainingForm"><input type="hidden" id="staffTrainingId">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label>Training Date *</label><input type="date" class="form-control" id="stDate" required></div>
+                            <div class="col-md-6"><label>Staff Name *</label><input type="text" class="form-control" id="stName" required></div>
+                            <div class="col-md-6"><label>Department</label><input type="text" class="form-control" id="stDept"></div>
+                            <div class="col-md-6"><label>Training Type *</label><select class="form-control" id="stType" required><option>Orientation</option><option>Safety</option><option>Animal Handling</option><option>Protocol</option><option>Equipment</option><option>Compliance</option></select></div>
+                            <div class="col-md-12"><label>Training Topic *</label><input type="text" class="form-control" id="stTopic" required></div>
+                            <div class="col-md-6"><label>Trainer</label><input type="text" class="form-control" id="stTrainer"></div>
+                            <div class="col-md-6"><label>Duration (hours)</label><input type="number" step="0.5" class="form-control" id="stDuration"></div>
+                            <div class="col-md-6"><label>Status</label><select class="form-control" id="stStatus"><option>Scheduled</option><option>Completed</option><option>In Progress</option></select></div>
+                            <div class="col-md-6"><label>Certification</label><select class="form-control" id="stCert"><option>Yes</option><option>No</option><option>Pending</option></select></div>
+                            <div class="col-md-12"><label>Notes</label><textarea class="form-control" id="stNotes" rows="2"></textarea></div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('stafftraining')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Facility Inventory Modal -->
+    <div class="modal fade" id="facilityInvModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title">Facility Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body">
+                    <form id="facilityInvForm"><input type="hidden" id="facId">
+                        <div class="mb-3"><label>Item ID *</label><input type="text" class="form-control" id="facItemId" required></div>
+                        <div class="mb-3"><label>Category *</label><input type="text" class="form-control" id="facCat" required></div>
+                        <div class="mb-3"><label>Item Name *</label><input type="text" class="form-control" id="facName" required></div>
+                        <div class="mb-3"><label>Quantity *</label><input type="number" class="form-control" id="facQty" required></div>
+                        <div class="mb-3"><label>Location *</label><input type="text" class="form-control" id="facLoc" required></div>
+                        <div class="mb-3"><label>Condition</label><select class="form-control" id="facCond"><option>Good</option><option>Fair</option><option>Poor</option></select></div>
+                    </form>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn btn-primary" onclick="saveData('facilityinv')">Save</button></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- DATA MANAGEMENT (LocalStorage) ---
+        const DB = {
+            get: (key) => JSON.parse(localStorage.getItem('rodent_' + key)) || [],
+            set: (key, data) => localStorage.setItem('rodent_' + key, JSON.stringify(data)),
+            add: (key, item) => {
+                const data = DB.get(key);
+                item.id = Date.now(); 
+                item.savedAt = new Date().toISOString();
+                data.push(item);
+                DB.set(key, data);
+                return item;
+            },
+            update: (key, id, updatedItem) => {
+                const data = DB.get(key);
+                const index = data.findIndex(i => i.id == id);
+                if (index !== -1) {
+                    updatedItem.savedAt = new Date().toISOString();
+                    data[index] = { ...data[index], ...updatedItem };
+                    DB.set(key, data);
+                }
+            },
+            delete: (key, id) => {
+                let data = DB.get(key);
+                data = data.filter(i => i.id != id);
+                DB.set(key, data);
+            }
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            renderAllTables();
+            updateDashboard();
+            
+            document.getElementById('sidebarCollapse').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('active');
+            });
+
+            // Set default dates to today
+            document.querySelectorAll('input[type="date"]').forEach(input => {
+                if(!input.value) input.valueAsDate = new Date();
+            });
+        });
+
+        // --- NAVIGATION ---
+        function showSection(sectionId) {
+            document.querySelectorAll('.section-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            
+            document.querySelectorAll('#sidebar a').forEach(el => el.classList.remove('active'));
+            event.target.closest('a').classList.add('active');
+            
+            document.getElementById('page-title').innerText = sectionId.replace(/-/g, ' ').toUpperCase();
+            renderAllTables();
+            updateDashboard();
+        }
+
+        function openModal(modalId) {
+            document.querySelectorAll('form input, form select, form textarea').forEach(i => {
+                if(i.type !== 'hidden') i.value = '';
+            });
+            document.querySelectorAll('form input[type="hidden"]').forEach(i => i.value = '');
+            populateDropdowns();
+            
+            // Set default date
+            const dateInputs = document.querySelectorAll('#' + modalId + ' input[type="date"]');
+            dateInputs.forEach(i => i.valueAsDate = new Date());
+
+            new bootstrap.Modal(document.getElementById(modalId)).show();
+        }
+
+        function populateDropdowns() {
+            const rooms = DB.get('rooms').length ? DB.get('rooms') : ['RF1', 'RF2', 'RF3', 'Quarantine', 'Rabbit Room'];
+            const vets = DB.get('vets').length ? DB.get('vets') : ['Dr. Imani', 'Dr. Atunga', 'Dr. Benjamin', 'Dr. Lucy'];
+            const species = DB.get('species').length ? DB.get('species') : ['Mice', 'Rat', 'Rabbit'];
+
+            const setOptions = (id, list) => {
+                const el = document.getElementById(id);
+                if(!el) return;
+                el.innerHTML = '<option value="">Select...</option>';
+                list.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = typeof item === 'object' ? item.name : item;
+                    opt.text = typeof item === 'object' ? item.name : item;
+                    el.appendChild(opt);
+                });
+            };
+
+            // Room Dropdowns
+            ['cageRoom', 'censusRoom', 'treatRoom', 'breedRoom', 'dfRoom', 'enRoom', 'envRoom', 'dhRoom', 'inspArea', 'ppTitle'].forEach(id => setOptions(id, rooms));
+            // Vet Dropdowns
+            ['treatVet', 'projVet'].forEach(id => setOptions(id, vets));
+            // Species Dropdowns
+            ['cageSpecies', 'censusSpecies', 'dhSpecies', 'projSpecies', 'arSpecies'].forEach(id => setOptions(id, species));
+        }
+
+        // --- SAVE DATA LOGIC ---
+        function saveData(type) {
+            let data = {};
+            const idField = type + 'Id';
+            const id = document.getElementById(idField) ? document.getElementById(idField).value : null;
+
+            // Map form fields to object based on type
+            if (type === 'cage') {
+                data = {
+                    cageId: document.getElementById('cageCageId').value,
+                    room: document.getElementById('cageRoom').value,
+                    species: document.getElementById('cageSpecies').value,
+                    strain: document.getElementById('cageStrain').value,
+                    count: document.getElementById('cageCount').value,
+                    sex: document.getElementById('cageSex').value,
+                    date: document.getElementById('cageDate').value
+                };
+            } else if (type === 'census') {
+                data = {
+                    date: document.getElementById('censusDate').value,
+                    room: document.getElementById('censusRoom').value,
+                    species: document.getElementById('censusSpecies').value,
+                    strain: document.getElementById('censusStrain').value,
+                    males: document.getElementById('censusMales').value,
+                    females: document.getElementById('censusFemales').value,
+                    juvies: document.getElementById('censusJuvies').value,
+                    pups: document.getElementById('censusPups').value,
+                    by: document.getElementById('censusBy').value
+                };
+                data.total = parseInt(data.males||0) + parseInt(data.females||0) + parseInt(data.juvies||0) + parseInt(data.pups||0);
+            } else if (type === 'dailyhealth') {
+                data = {
+                    date: document.getElementById('dhDate').value,
+                    time: document.getElementById('dhTime').value,
+                    room: document.getElementById('dhRoom').value,
+                    cage: document.getElementById('dhCage').value,
+                    species: document.getElementById('dhSpecies').value,
+                    strain: document.getElementById('dhStrain').value,
+                    animals: document.getElementById('dhAnimals').value,
+                    condition: document.getElementById('dhCondition').value,
+                    activity: document.getElementById('dhActivity').value,
+                    clinical: document.getElementById('dhClinical').value,
+                    notes: document.getElementById('dhNotes').value
+                };
+            } else if (type === 'treatment') {
+                data = {
+                    date: document.getElementById('treatDate').value,
+                    room: document.getElementById('treatRoom').value,
+                    cage: document.getElementById('treatCage').value,
+                    drug: document.getElementById('treatDrug').value,
+                    dose: document.getElementById('treatDose').value,
+                    route: document.getElementById('treatRoute').value,
+                    vet: document.getElementById('treatVet').value,
+                    notes: document.getElementById('treatNotes').value
+                };
+            } else if (type === 'breeding') {
+                data = {
+                    date: document.getElementById('breedDate').value,
+                    room: document.getElementById('breedRoom').value,
+                    cage: document.getElementById('breedCage').value,
+                    total: document.getElementById('breedTotal').value,
+                    notes: document.getElementById('breedNotes').value
+                };
+            } else if (type === 'project') {
+                data = {
+                    id: document.getElementById('projId').value,
+                    title: document.getElementById('projTitle').value,
+                    pi: document.getElementById('projPI').value,
+                    species: document.getElementById('projSpecies').value,
+                    strain: document.getElementById('projStrain').value,
+                    approved: document.getElementById('projApproved').value,
+                    used: document.getElementById('projUsed').value,
+                    status: document.getElementById('projStatus').value,
+                    vet: document.getElementById('projVet').value,
+                    tech: document.getElementById('projTech').value
+                };
+            } else if (type === 'projectprogress') {
+                data = {
+                    date: document.getElementById('ppDate').value,
+                    projId: document.getElementById('ppProjId').value,
+                    title: document.getElementById('ppTitle').value,
+                    procedure: document.getElementById('ppProcedure').value,
+                    animals: document.getElementById('ppAnimals').value,
+                    isrec: document.getElementById('ppIsrec').value,
+                    tech: document.getElementById('ppTech').value,
+                    pi: document.getElementById('ppPI').value,
+                    observations: document.getElementById('ppObservations').value
+                };
+            } else if (type === 'animalrequisition') {
+                data = {
+                    date: document.getElementById('arDate').value,
+                    projId: document.getElementById('arProjId').value,
+                    researcher: document.getElementById('arResearcher').value,
+                    dept: document.getElementById('arDept').value,
+                    species: document.getElementById('arSpecies').value,
+                    strain: document.getElementById('arStrain').value,
+                    qtyRequested: document.getElementById('arQtyRequested').value,
+                    qtyApproved: document.getElementById('arQtyApproved').value,
+                    status: document.getElementById('arStatus').value,
+                    approvedBy: document.getElementById('arApprovedBy').value,
+                    notes: document.getElementById('arNotes').value
+                };
+            } else if (type === 'workorder') {
+                data = {
+                    date: document.getElementById('woDate').value,
+                    by: document.getElementById('woBy').value,
+                    dept: document.getElementById('woDept').value,
+                    desc: document.getElementById('woDesc').value,
+                    assigned: document.getElementById('woAssigned').value,
+                    status: document.getElementById('woStatus').value
+                };
+            } else if (type === 'inspection') {
+                data = {
+                    date: document.getElementById('inspDate').value,
+                    type: document.getElementById('inspType').value,
+                    area: document.getElementById('inspArea').value,
+                    inspector: document.getElementById('inspInspector').value,
+                    findings: document.getElementById('inspFindings').value,
+                    issues: document.getElementById('inspIssues').value,
+                    action: document.getElementById('inspAction').value,
+                    status: document.getElementById('inspStatus').value,
+                    followup: document.getElementById('inspFollowup').value
+                };
+            } else if (type === 'charge') {
+                data = {
+                    date: document.getElementById('chDate').value,
+                    code: document.getElementById('chCode').value,
+                    res: document.getElementById('chRes').value,
+                    service: document.getElementById('chService').value,
+                    qty: document.getElementById('chQty').value,
+                    unit: document.getElementById('chUnit').value,
+                    total: document.getElementById('chTotal').value
+                };
+            } else if (type === 'dailyfeed') {
+                data = {
+                    date: document.getElementById('dfDate').value,
+                    room: document.getElementById('dfRoom').value,
+                    cage: document.getElementById('dfCage').value,
+                    qty: document.getElementById('dfQty').value,
+                    staff: document.getElementById('dfStaff').value
+                };
+            } else if (type === 'feedinv') {
+                data = {
+                    batch: document.getElementById('fiBatch').value,
+                    type: document.getElementById('fiType').value,
+                    supp: document.getElementById('fiSupp').value,
+                    qty: document.getElementById('fiQty').value,
+                    exp: document.getElementById('fiExp').value
+                };
+            } else if (type === 'cleaning') {
+                data = {
+                    date: document.getElementById('clDate').value,
+                    room: document.getElementById('clRoom').value,
+                    type: document.getElementById('clType').value,
+                    chem: document.getElementById('clChem').value,
+                    by: document.getElementById('clBy').value
+                };
+            } else if (type === 'enrichment') {
+                data = {
+                    cage: document.getElementById('enCage').value,
+                    room: document.getElementById('enRoom').value,
+                    type: document.getElementById('enType').value,
+                    mat: document.getElementById('enMat').value,
+                    date: document.getElementById('enDate').value,
+                    staff: document.getElementById('enStaff').value
+                };
+            } else if (type === 'environment') {
+                data = {
+                    date: document.getElementById('envDate').value,
+                    time: document.getElementById('envTime').value,
+                    room: document.getElementById('envRoom').value,
+                    temp: document.getElementById('envTemp').value,
+                    hum: document.getElementById('envHum').value,
+                    light: document.getElementById('envLight').value,
+                    by: document.getElementById('envBy').value
+                };
+            } else if (type === 'stafftraining') {
+                data = {
+                    date: document.getElementById('stDate').value,
+                    name: document.getElementById('stName').value,
+                    dept: document.getElementById('stDept').value,
+                    type: document.getElementById('stType').value,
+                    topic: document.getElementById('stTopic').value,
+                    trainer: document.getElementById('stTrainer').value,
+                    duration: document.getElementById('stDuration').value,
+                    status: document.getElementById('stStatus').value,
+                    cert: document.getElementById('stCert').value,
+                    notes: document.getElementById('stNotes').value
+                };
+            } else if (type === 'facilityinv') {
+                data = {
+                    itemId: document.getElementById('facItemId').value,
+                    cat: document.getElementById('facCat').value,
+                    name: document.getElementById('facName').value,
+                    qty: document.getElementById('facQty').value,
+                    loc: document.getElementById('facLoc').value,
+                    cond: document.getElementById('facCond').value
+                };
+            }
+
+            if (id) {
+                DB.update(type, id, data);
+                showToast('Record Updated Successfully!', 'success');
+            } else {
+                DB.add(type, data);
+                showToast('Record Saved Successfully!', 'success');
+            }
+
+            const modalEl = document.getElementById(type + 'Modal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+
+            renderAllTables();
+            updateDashboard();
+        }
+
+        function deleteData(type, id) {
+            if(confirm('Are you sure you want to delete this record?')) {
+                DB.delete(type, id);
+                showToast('Record Deleted', 'danger');
+                renderAllTables();
+                updateDashboard();
+            }
+        }
+
+        function editData(type, id) {
+            let modalId = type + 'Modal';
+            
+            const item = DB.get(type).find(i => i.id == id);
+            if (!item) return;
+
+            openModal(modalId);
+            document.getElementById(type + 'Id').value = item.id;
+
+            // Map object back to form fields
+            Object.keys(item).forEach(key => {
+                let fieldId = type + key.charAt(0).toUpperCase() + key.slice(1);
+                const el = document.getElementById(fieldId);
+                if (el) el.value = item[key];
+            });
+        }
+
+        // --- RENDERING ---
+        function renderAllTables() {
+            renderTable('cage', ['cageId', 'room', 'species', 'strain', 'count', 'sex', 'date'], 'cageTable');
+            renderTable('census', ['date', 'room', 'species', 'strain', 'males', 'females', 'total', 'by'], 'censusTable');
+            renderTable('dailyhealth', ['date', 'time', 'room', 'cage', 'species', 'strain', 'animals', 'condition', 'activity', 'clinical'], 'dailyHealthTable');
+            renderTable('treatment', ['date', 'room', 'cage', 'drug', 'dose', 'route', 'vet'], 'treatmentTable');
+            renderTable('breeding', ['date', 'room', 'cage', 'total', 'notes'], 'breedingTable');
+            renderTable('project', ['id', 'title', 'pi', 'species', 'strain', 'approved', 'used', 'status', 'vet', 'tech'], 'projectTable');
+            renderTable('projectprogress', ['date', 'projId', 'title', 'procedure', 'animals', 'observations', 'isrec', 'tech', 'pi'], 'projectProgressTable');
+            renderTable('animalrequisition', ['date', 'projId', 'researcher', 'species', 'strain', 'qtyRequested', 'qtyApproved', 'status', 'approvedBy'], 'animalRequisitionTable');
+            renderTable('workorder', ['date', 'by', 'dept', 'desc', 'assigned', 'status'], 'workOrderTable');
+            renderTable('inspection', ['date', 'type', 'area', 'inspector', 'findings', 'issues', 'action', 'status'], 'inspectionTable');
+            renderTable('charge', ['date', 'code', 'res', 'service', 'qty', 'unit', 'total'], 'chargeTable');
+            renderTable('dailyfeed', ['date', 'room', 'cage', 'qty', 'staff'], 'dailyFeedTable');
+            renderTable('feedinv', ['batch', 'type', 'supp', 'qty', 'exp'], 'feedInvTable');
+            renderTable('cleaning', ['date', 'room', 'type', 'chem', 'by'], 'cleaningTable');
+            renderTable('enrichment', ['cage', 'room', 'type', 'mat', 'date', 'staff'], 'enrichmentTable');
+            renderTable('environment', ['date', 'time', 'room', 'temp', 'hum', 'light', 'by'], 'envTable');
+            renderTable('stafftraining', ['date', 'name', 'dept', 'type', 'topic', 'trainer', 'duration', 'status', 'cert'], 'staffTrainingTable');
+            renderTable('facilityinv', ['itemId', 'cat', 'name', 'qty', 'loc', 'cond'], 'facilityInvTable');
+        }
+
+        function renderTable(type, fields, tableId) {
+            const data = DB.get(type);
+            const table = document.getElementById(tableId);
+            if (!table) return;
+            
+            const tbody = table.querySelector('tbody');
+            tbody.innerHTML = '';
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                let html = '';
+                fields.forEach(field => {
+                    html += `<td>${item[field] || ''}</td>`;
+                });
+                html += `
+                    <td>
+                        <button class="btn btn-sm btn-info text-white" onclick="editData('${type}', ${item.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteData('${type}', ${item.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateDashboard() {
+            const cageData = DB.get('cage');
+            const workData = DB.get('workorder');
+            const rooms = DB.get('rooms').length ? DB.get('rooms') : ['RF1', 'RF2', 'RF3'];
+
+            const totalAnimals = cageData.reduce((sum, item) => sum + (parseInt(item.count) || 0), 0);
+            const activeCages = cageData.length;
+            const pendingTasks = workData.filter(w => w.status === 'Pending').length;
+            
+            document.getElementById('dash-total-animals').innerText = totalAnimals;
+            document.getElementById('dash-active-cages').innerText = activeCages;
+            document.getElementById('dash-pending-tasks').innerText = pendingTasks;
+            document.getElementById('dash-total-rooms').innerText = rooms.length;
+        }
+
+        // --- SETTINGS ---
+        function loadSettings() {
+            renderSettingList('rooms', 'roomList');
+            renderSettingList('vets', 'vetList');
+            renderSettingList('species', 'speciesList');
+        }
+
+        function renderSettingList(key, elementId) {
+            const list = DB.get(key);
+            const ul = document.getElementById(elementId);
+            ul.innerHTML = '';
+            list.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                li.innerHTML = `${item.name || item} <button class="btn btn-sm btn-danger" onclick="removeSetting('${key}', ${index})">&times;</button>`;
+                ul.appendChild(li);
+            });
+        }
+
+        function addSetting(key, inputId) {
+            const val = document.getElementById(inputId).value;
+            if (val) {
+                const list = DB.get(key);
+                list.push(val);
+                DB.set(key, list);
+                document.getElementById(inputId).value = '';
+                loadSettings();
+                showToast('Setting Added', 'success');
+            }
+        }
+
+        function removeSetting(key, index) {
+            const list = DB.get(key);
+            list.splice(index, 1);
+            DB.set(key, list);
+            loadSettings();
+        }
+
+        function clearAllData() {
+            if(confirm('WARNING: This will delete ALL data permanently. Continue?')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        // --- UTILS ---
+        function calcCharge() {
+            const qty = parseFloat(document.getElementById('chQty').value) || 0;
+            const unit = parseFloat(document.getElementById('chUnit').value) || 0;
+            document.getElementById('chTotal').value = (qty * unit).toFixed(2);
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            const bgClass = type === 'success' ? 'bg-success' : (type === 'danger' ? 'bg-danger' : 'bg-warning');
+            
+            const html = `
+                <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">${message}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+            const toastEl = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastEl);
+            toast.show();
+            toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        }
+
+        // --- PDF GENERATION ---
+        function generatePDF(type) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            doc.text("Rodent Facility Report: " + type.toUpperCase().replace(/-/g, ' '), 14, 20);
+            
+            const data = DB.get(type);
+            if (data.length === 0) {
+                showToast("No data to export", "warning");
+                return;
+            }
+
+            let head = [], body = [];
+            
+            if (type === 'cage-inventory') {
+                head = [['Cage ID', 'Room', 'Species', 'Count', 'Sex', 'Date']];
+                body = data.map(i => [i.cageId, i.room, i.species, i.count, i.sex, i.date]);
+            } else if (type === 'census') {
+                head = [['Date', 'Room', 'Species', 'Males', 'Females', 'Total', 'Counted By']];
+                body = data.map(i => [i.date, i.room, i.species, i.males, i.females, i.total, i.by]);
+            } else if (type === 'daily-health') {
+                head = [['Date', 'Time', 'Room', 'Cage', 'Species', 'Animals', 'Condition', 'Activity', 'Clinical Signs']];
+                body = data.map(i => [i.date, i.time, i.room, i.cage, i.species, i.animals, i.condition, i.activity, i.clinical]);
+            } else if (type === 'treatment') {
+                head = [['Date', 'Room', 'Cage', 'Drug', 'Dose', 'Vet']];
+                body = data.map(i => [i.date, i.room, i.cage, i.drug, i.dose, i.vet]);
+            } else if (type === 'projects') {
+                head = [['Project ID', 'Title', 'PI', 'Species', 'Animals Approved', 'Status']];
+                body = data.map(i => [i.id, i.title, i.pi, i.species, i.approved, i.status]);
+            } else if (type === 'project-progress') {
+                head = [['Date', 'Project ID', 'Title', 'Procedure', 'Animals Used', 'Tech', 'PI']];
+                body = data.map(i => [i.date, i.projId, i.title, i.procedure, i.animals, i.tech, i.pi]);
+            } else if (type === 'animal-requisition') {
+                head = [['Date', 'Project ID', 'Researcher', 'Species', 'Qty Requested', 'Qty Approved', 'Status']];
+                body = data.map(i => [i.date, i.projId, i.researcher, i.species, i.qtyRequested, i.qtyApproved, i.status]);
+            } else if (type === 'inspection') {
+                head = [['Date', 'Type', 'Area', 'Inspector', 'Issues', 'Status']];
+                body = data.map(i => [i.date, i.type, i.area, i.inspector, i.issues, i.status]);
+            } else if (type === 'charges') {
+                head = [['Date', 'Code', 'Researcher', 'Service', 'Qty', 'Total']];
+                body = data.map(i => [i.date, i.code, i.res, i.service, i.qty, '$'+i.total]);
+            } else if (type === 'staff-training') {
+                head = [['Date', 'Staff Name', 'Department', 'Training Type', 'Topic', 'Trainer', 'Duration', 'Status', 'Certification']];
+                body = data.map(i => [i.date, i.name, i.dept, i.type, i.topic, i.trainer, i.duration, i.status, i.cert]);
+            } else {
+                // Generic fallback
+                head = [Object.keys(data[0]).filter(k => k !== 'id' && k !== 'savedAt')];
+                body = data.map(i => Object.values(i).filter((v, k) => k !== 0 && k !== Object.keys(i).length - 1));
+            }
+
+            doc.autoTable({
+                head: head,
+                body: body,
+                startY: 30,
+            });
+
+            doc.save(`Rodent_Facility_${type}_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            showToast("PDF Generated Successfully", "success");
+        }
+    </script>
+</body>
+</html>
